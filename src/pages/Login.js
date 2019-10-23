@@ -1,19 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-community/async-storage'
-import { KeyboardAvoidingView, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, View, KeyboardAvoidingView, Text, StyleSheet, Image, TextInput, TouchableOpacity } from 'react-native';
 
 import logo from "../assets/politico.png"
 import api from '../services/api';
 
+import { ListItem } from 'react-native-elements'
+
 export default function Login({ navigation }) {
     const [user, setUser] = useState('');
+    const [vereadores, setVereadores] = useState([]);
 
-    useEffect(() => {
-        AsyncStorage.getItem('user').then(user => {
-            if (user) {
-                navigation.navigate('Main', {id: user})
+    const selectUser = async u => {
+        console.log(u);
+        navigation.navigate('Main', {user: u});
+       // await AsyncStorage.setItem('user', u.id);
+        
+    }
+
+    useEffect(async () => {
+        let user2 = await AsyncStorage.getItem('user');
+        if (user2) {
+     //       navigation.navigate('Main', {id: user2})
+        }
+        
+        const response = await api.get('/vereadores.php');
+
+        const tmp = JSON.parse(response.data.replace('﻿', '')).map(r => { 
+            return { 
+                id: r.id,
+                name: r.nome_urna, 
+                subtitle: r.nome,
+                avatar_url: `${api.defaults.baseURL}/${r.imagem}`
             }
-        })
+        });
+
+        setVereadores(tmp);
     }, []);
 
     async function handleLogin() {
@@ -25,12 +47,21 @@ export default function Login({ navigation }) {
     }
 
     return (
-        <KeyboardAvoidingView 
-            behavior="padding"
-            style={styles.container}
-        >
-            <Image source={logo} />
-
+        <ScrollView>
+                {
+                    vereadores.map((l, i) => (
+                    <ListItem
+                        key={i}
+                        leftAvatar={{ source: { uri: l.avatar_url } }}
+                        title={l.name}
+                        subtitle={l.subtitle}
+                        button={true}
+                        bottomDivider
+                        onPress={() => selectUser(l)}
+                    />
+                    ))
+                }
+         
             <TextInput 
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -43,13 +74,14 @@ export default function Login({ navigation }) {
             <TouchableOpacity onPress={handleLogin} style={styles.button}>
                 <Text style={styles.buttonText}>OK</Text>
             </TouchableOpacity>
-        </KeyboardAvoidingView>
+        </ScrollView>
     )
 }
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flexShrink: 0,
+        flexGrow: 1,
         backgroundColor: "#F3F3F3",
         justifyContent: "center",
         alignItems: "center",
@@ -71,7 +103,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#DF4723',
         borderRadius: 4,
         marginTop: 10,
-        justifyContent: 'center',
+        justifyContent: 'space-between',
         alignItems: 'center'
     },
     buttonText: {
